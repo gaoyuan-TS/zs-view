@@ -1,0 +1,576 @@
+<template>
+  <div class="newgood">
+      <page-content :name="$t('Goods.editGoodTitle')">
+        <div class="content">
+          <el-row type="flex" justify="space-between">
+            <el-col :span="12" style="margin-top: 8px">
+              <div style="color: rgba(128,128,128,1);font-size: 14px">
+                <span style="font-size: 14px; color: red">*</span>
+                {{$t('Goods.goodTypeInput')}}：
+              </div>
+              <div class="item-input">
+                <el-cascader
+                  style="flex: 0.7"
+                  :options="thirds"
+                  :props="{
+                    value: 'categoryId',
+                    label: 'categoryName',
+                    children: 'children'
+                  }"
+                  clearable
+                  ref="cascader"
+                  v-model="categoryId"
+                  @change="onProvincesChange"
+                  :placeholder="$t('Goods.goodTypeInput')"
+                  disabled
+                ></el-cascader>
+              </div>
+              
+            </el-col>
+            
+            <el-col :span="12" style="margin-top: 8px">
+              <div style="color: rgba(128,128,128,1);font-size: 14px">
+                <span style="font-size: 14px; color: red">*</span>
+
+                {{$t('Goods.goodNameInput')}}
+              </div>
+              <div class="item-input">
+
+                <el-input style="flex: 0.7" v-model="goodName" :placeholder="$t('Goods.goodNameInput')"></el-input>
+              </div>
+             
+            </el-col>
+          </el-row>
+
+          <!-- 上传图片与视频 -->
+          <el-row>
+            <!-- 品牌下拉 -->
+            <el-col :span="12" v-for="(bItem, bidx) in brands" :key="bidx" style="color: rgba(128,128,128,1);margin-top: 8px">
+              <div style="font-size: 14px">
+                {{bItem.propertyName}}：
+              </div>
+              <div class="item-input">
+                <el-select style="flex: 0.7" :placeholder="bItem.propertyName" v-model="brandId">
+                  <el-option
+                    v-for="(vitem, vidx1) in bItem.comboBoxValue"
+                    :key="vidx1"
+                    :label="vitem.propertyValue"
+                    :value="vitem.propertyValueId"
+                  ></el-option>
+                </el-select>
+              </div>
+              
+            </el-col>
+
+            <!-- 下拉类型的属性 -->
+            <el-col :span="12" v-for="(citem, cidx) in comboBoxs" :key="citem.propertyId" style="margin-top: 8px">
+              <div style="color: rgba(128,128,128,1);font-size: 14px">
+                {{citem.propertyName}}：
+              </div>
+              <div class="item-input">
+                <el-select :placeholder="citem.propertyName" style="flex: 0.7" v-model="comboValues[cidx]">
+                  <el-option
+                    v-for="(vitem, vidx1) in citem.comboBoxValue"
+                    :key="vidx1"
+                    :label="vitem.propertyValue"
+                    :value="vitem.propertyValueId"
+                  ></el-option>
+                </el-select>
+              </div>
+                
+            </el-col>
+
+            <!-- 文本类型的属性 -->
+            <el-col :span="12" v-for="(titem, tidx) in textBoxs" :key="titem.propertyId" style="margin-top: 8px">
+              <div style="color: rgba(128,128,128,1);font-size: 14px">
+                {{titem.propertyName}}：
+              </div>
+              <div class="item-input">
+                <el-input
+                  style="flex: 0.7"
+                  type="text"
+                  v-model="textValues[tidx].textBoxValue"
+                  :placeholder="titem.propertyName"
+                  :maxlength="titem.fieldLength"
+                  show-word-limit
+                ></el-input>
+              </div>
+              
+            </el-col>
+              
+            <el-col :span="12">
+              
+              <div class="upload-item">
+                <div class="upload-item-title">
+                  <span style="font-size: 14px; color: red">*</span>
+                  {{$t('Goods.newGoodImg')}}：
+                </div>
+                <el-upload
+                  action="https://zs.cntracechain.com/imageService/image/addBatch"
+                  :data="upData"
+                  list-type="picture-card"
+                  multiple
+                  :file-list="images"
+                  name="files"
+                  :on-success="upimg"
+                  :on-preview="handlePictureCardPreview"
+                  :on-remove="handleRemove"
+                  :before-upload="beforeImgUpload"
+                >
+                  <i class="el-icon-plus"></i>
+                </el-upload>
+                <el-dialog :visible.sync="dialogVisible" size="tiny">
+                  <img width="100%" :src="dialogImageUrl" alt />
+                </el-dialog>
+              </div>
+              
+            </el-col>
+
+            <el-col :span="12">
+              <div class="upload-item">
+                <div class="upload-item-title">
+                  {{$t('Goods.newGoodVideo')}}：
+                </div>
+                <div>
+                  <el-upload
+                    class="upload-demo"
+                    ref="upload"
+                    action="https://zs.cntracechain.com/imageService/image/add"
+                    :on-success="handlesuccess"
+                    :on-remove="handleremovevideo"
+                    :file-list="videoList"
+                    :limit="1"
+                    :auto-upload="true"
+                    :data="upData"
+                    :before-upload="beforeAvatarUpload"
+                  >
+                    <el-button slot="trigger" size="small" type="primary">{{$t('Goods.newGoodVideoButton')}}</el-button>
+                    <div slot="tip" class="el-upload__tip" style="color: rgba(228,16,0,1)">{{$t('Goods.newGoodVideoTip1')}}</div>
+                    <div slot="tip" class="el-upload__tip" style="color: rgba(228,16,0,1)">{{$t('Goods.newGoodVideoTip2')}}</div>
+                  </el-upload>
+                </div>
+                
+              </div>
+            </el-col>
+            <el-col :span="24">
+              <div class="upload-item">
+                <div class="upload-item-title">
+                  <span style="font-size: 14px; color: red">*</span>
+                  {{$t('Goods.newGoodDetails')}}：
+                </div>
+                <quill-editor ref="myQuillEditor" v-model="introduction" :options="editorOption" />
+              </div>
+            </el-col>
+          </el-row>
+          <el-row type="flex" justify="center">
+            <!-- <el-col :span="24"> -->
+              <div class="confirmBtn">
+                <el-button type="primary" @click="insertGood">{{$t('button.Comfirm')}}</el-button>
+                <el-button type="danger" @click="$router.go(-1)">{{$t('button.cancel')}}</el-button>
+              </div>
+            <!-- </el-col> -->
+          </el-row>
+        </div>
+      </page-content>
+  </div>
+</template>
+
+<script>
+import 'quill/dist/quill.core.css'
+import 'quill/dist/quill.snow.css'
+import 'quill/dist/quill.bubble.css'
+
+import pageContent from "../../../components/content";
+import { quillEditor } from 'vue-quill-editor'
+import { quillRedefine } from 'vue-quill-editor-upload'
+import { toolbarOptions } from '../../../assets/js/quillEditorConfig.js'
+import exifs from '../../../assets/js/exifs.js'
+
+function getCascaderObj (val, opt) {
+  return val.map(function (value, index, array) {
+    for (var itm of opt) {
+      if (itm.categoryId === value) {
+        opt = itm.children
+        return itm.categoryName
+      }
+    }
+    return null
+  })
+}
+
+export default {
+  components: {
+    pageContent,
+    quillEditor,
+    quillRedefine
+  },
+  data() {
+    return {
+      merchantId: '', // 商家id
+      goodId: '',
+      thirds: [], // 分类列表
+      categoryId: '', // 选择的分类id
+      labels: [], // 选择的三级分类名称
+      goodName: '', // 新建时的商品名称
+      brands: [], // 品牌
+      textBoxs: [], // 文本类型的属性列表
+      comboBoxs: [], // 下拉类型的属性列表
+      upData: {
+        imgSystemId: 'newGood',
+        imgSpecificUniqueValue: 'newGoodId'
+      }, // 上传图片时要带的参数
+      brandId: '', // 新建时的品牌id
+      comboBoxValue: [], // 新建时的
+      images: [], // 商品图
+      shortVideoUrl: '', // 商品视频url
+      dialogImageUrl: '',
+      dialogVisible: false,
+      fileList: [],
+      editorOption: {}, // 富文本的配置
+      introduction: '', // 商品详情图或描述
+      textValues: [], // 文本框属性集合
+      comboValues: [], // 下拉属性id集合
+      videoList: []
+    }
+  },
+  created() {
+    this.goodid = this.$route.query.id
+    this.editorOption = quillRedefine({
+      uploadConfig: { // 图片上传的设置
+        action: "https://zs.cntracechain.com/imageService/file/upload",
+         res: (res) => {
+          //  console.log(res)
+          return res.data.url
+        },
+        name: 'file'  // 图片上传参数名
+      },
+      // placeholder: '请输入编辑内容',
+      toolOptions: toolbarOptions
+    })
+    let roleJson = this.$localStore.get('roleJson')
+    if (roleJson) {
+      this.merchantId = roleJson.merchant.merchantId
+    }
+    this.getThird()
+    
+  },
+  mounted() {
+    this.getGoodDetail(this.$route.query.id)
+  },
+  methods: {
+    // 获取商品分类的列表
+    getThird() {
+      this.$get('/back-end/category/getThird').then(res => {
+        this.thirds = res.data
+      })
+    },
+    // 获取商品的详情
+    getGoodDetail(gid) {
+      this.$get('/back-end/goods/get/' + gid).then(res => {
+        if (res.code === 200) {
+          let _data = res.data
+          this.categoryId = res.data.categoryId
+          this.goodName = _data.goodsName
+          this.categoryFullName = _data.categoryFullName
+          this.brandId = _data.brandId
+
+          for (var i = 0; i < _data.goodsProperty.length; i++) {
+            if (_data.goodsProperty[i].enterType === 0) {
+              this.textValues.push({
+                textBoxValue: _data.goodsProperty[i].textBoxValue,
+                textBoxValueId: _data.goodsProperty[i].propertyValueId
+              })
+            } else if (_data.goodsProperty[i].enterType === 1) {
+              this.comboValues.push(_data.goodsProperty[i].propertyValueId)
+            }
+          }
+          this.imageIndex = _data.images.length
+          for (var g = 0; g < _data.images.length; g++) {
+            this.images.push({
+              name: _data.images[g].imageIndex,
+              url: _data.images[g].imageUrl
+            })
+          }
+
+          this.shortVideoUrl = _data.videoUrl || ''
+          if (_data.videoUrl) {
+            this.videoList.push({
+              name: _data.videoUrl,
+              url: _data.videoUrl
+            })
+          } else {
+            this.videoList = []
+          }
+          
+          this.getProperty(res.data.categoryId)
+          this.introduction = _data.introductionInfo
+        }
+      })
+    },
+    /**
+     * 获取分类属性
+     * 返回的数据：1、判断 propertyId(为-1时时品牌)
+     *            2、判断 enterType（为0时时文本框的，为1时是下拉类型的）
+     */
+    getProperty(categoryId) {
+      this.$get('/back-end/property/get/' + categoryId + '/' + this.merchantId).then(res => {
+        console.log(res)
+        let _data = res.data
+        let _brands = []
+        let _comboBoxs = []
+        let _textBoxs = []
+        _data.forEach(item => {
+          if (item.propertyId === -1) {
+            _brands.push(item)
+          } else {
+            if (item.enterType === 0) {
+              _textBoxs.push({
+                propertyName: item.propertyName,
+                  propertyValueId: item.comboBoxValue[0].propertyValueId,
+                  propValue: '',
+                  fieldLength: item.fieldLength
+              })
+            } else {
+              _comboBoxs.push(item)
+            }
+          }
+        })
+
+        this.brands = _brands
+        this.comboBoxs = _comboBoxs
+        this.textBoxs = _textBoxs
+
+        if (this.textBoxs.length !== this.textValues.length) {
+          var _textValues = []
+          for (let i = 0; i < this.textBoxs.length; i++) {
+            _textValues.push({
+              textBoxValue: '',
+              textBoxValueId: this.textBoxs[i].propertyValueId
+            })
+          }
+          this.textValues = _textValues
+        }
+        // 
+      })
+    },
+    // 获取到三级分类全称
+    onProvincesChange (item) {
+      // this.labels = this.$refs['cascader'].currentLabels
+      // console.log(item, this.$refs['cascader'].currentLabels)
+      this.labels = getCascaderObj(this.categoryId, this.thirds)
+    },
+    // 上传产品图
+    upimg(response, file, fileList) {
+      let _image = {
+        url: response.data[0].imgUrl
+      }
+      this.images.push(_image)
+      for (let i = 0; i < this.images.length; i++) {
+        this.images[i].name = i
+      }
+    },
+    // 预览图片
+    handlePictureCardPreview(file) {
+      this.dialogImageUrl = file.url
+      this.dialogVisible = true
+    },
+    // 删除图片的操作
+    handleRemove(file) {
+      for (var i = 0; i < this.images.length; i++) {
+        if (this.images[i].url === file.url) {
+          this.images.splice(i, 1)
+        }
+      }
+    },
+    // 上传图片之前的钩子
+    beforeImgUpload (file) {
+      var testmsg = file.name.substring(file.name.lastIndexOf('.') + 1)
+      const extension = testmsg === 'png'
+      const extension2 = testmsg === 'jpg'
+      const extension3 = testmsg === 'jpeg'
+      const extension4 = testmsg === 'PNG'
+      const extension5 = testmsg === 'JPG'
+      const extension6 = testmsg === 'JPEG'
+      const isLt2M = file.size / 1024 / 1024 < 5
+      if (!extension && !extension2 && !extension3 && !extension4 && !extension5 && !extension6) {
+        this.$message.error(this.$t('uploadimg.format'))
+        return false
+      } else {
+        return new Promise(resolve => {
+          exifs.getOrientation(file).then(orient => {
+            // console.log(orient, 'Orient')
+            if (orient !== '' && orient !== 1 && orient !== undefined && orient !== 0) {
+              // console.log('1111111')
+              let reader = new FileReader()
+              let img = new Image()
+              reader.onload = (e) => {
+                // console.log('2222222')
+                img.src = e.target.result
+                img.onload = function () {
+                  // console.log('333333')
+                  const data = exifs.rotateImage(orient, img, img.width, img.height)
+                  const newFile = exifs.dataURLtoFile(data, file.name)
+                  resolve(newFile)
+                }
+              }
+              reader.readAsDataURL(file)
+            } else {
+              resolve(file)
+            }
+          })
+        })
+      }
+    },
+    // 上传视频
+    handlesuccess(file) {
+      if (Number(file.code) === 200) {
+        this.shortVideoUrl = file.data.imgUrl
+        this.$message({
+          message: file.message,
+          type: 'success'
+        })
+      } else {
+        this.$message.error(file.data.desc)
+      }
+    },
+    // 删除视频
+    handleremovevideo() {
+      this.shortVideoUrl = ''
+    },
+    // 限制只能上传视频
+    beforeAvatarUpload(file) {
+      var testmsg = file.name.substring(file.name.lastIndexOf('.') + 1)
+      const extension = testmsg === 'ogg'
+      const extension2 = testmsg === 'mp4'
+      const extension3 = testmsg === 'webm'
+      const isLt2M = file.size / 1024 / 1024 < 50
+
+      if (!extension && !extension2 && !extension3) {
+        this.$message.error(this.$t('uploadimg.format1'))
+        return false
+      }
+      if (!isLt2M) {
+        this.$message.error(this.$t('uploadimg.videoTenM'))
+        return false
+      }
+      return true
+    },
+    // 新建商品
+    insertGood() {
+      // 文本框的属性值
+      let _textValue = []
+      this.textBoxs.forEach(item => {
+        _textValue.push({
+          textBoxValueId: item.propertyValueId,
+          textBoxValue: item.propValue
+        })
+      })
+
+      // 上传的商品图片
+      let _goodImgs = []
+      this.images.forEach(item => {
+
+        _goodImgs.push({
+          imageUrl: item.url,
+          imageIndex: item.name
+        })
+      })
+
+      // 新建商品时所需要的参数
+      let _params = {
+        goodsId: this.goodid,
+        goodsName: this.goodName,
+        merchantId: this.merchantId,
+        categoryId: this.categoryId,
+        categoryFullName: this.labels.join('/'),
+        introductionInfo: this.introduction,
+        brandId: this.brandId ? this.brandId : null,
+        comboBoxValue: this.comboValues ? this.comboValues : null,
+        textValue: this.textValues ? this.textValues : null,
+        images: _goodImgs,
+        videoUrl: this.shortVideoUrl
+      }
+      console.log(_params)
+      let verify =  this.verifyParams(_params)
+      
+      if (verify) {
+        console.log(1111)
+        this.$post('/back-end/goods/update', _params).then(res => {
+          if (res.code === 200) {
+            this.$message.success(res.desc)
+            setTimeout(() => {
+              this.$router.go(-1)
+            }, 500);
+          } else {
+            this.$message.error(res.desc)
+          }
+          
+        })
+      }
+
+    },
+    // 验证必填项是否填写了
+    verifyParams(_data) {
+      if (!_data.goodsName) {
+        this.$message.error(this.$t('Goods.newGoodNameTip'))
+        return false
+      }
+      if (!_data.categoryId) {
+        this.$message.error(this.$t('Goods.newGoodCategoryIdTip'))
+        return false
+      }
+      if (!_data.images.length > 0) {
+        this.$message.error(this.$t('Goods.newGoodImgsTip'))
+        return false
+      }
+      if (!_data.introductionInfo) {
+        this.$message.error(this.$t('Goods.newGoodIntroductionTip'))
+        return false
+      }
+      return true
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+@zs_color: #ae1e24; //主题颜色
+  /deep/.el-input input {
+    border: none;
+    border-radius: 0 !important;
+  }
+  /deep/.el-input__inner {
+    border-bottom: 1px solid rgba(204, 204, 204, 1) !important;
+    padding: 0 !important;
+  }
+  .newgood {
+    .content {
+      margin-top: 22px;
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.2);
+      // height: 7.82rem;
+      padding: 20px;
+    }
+  }
+
+  .upload-item {
+    margin-top: 40px;
+    .upload-item-title {
+      color: rgba(128,128,128,1);
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+  }
+
+  // 富文本框
+  /deep/.ql-editor{
+    height:400px;
+  }
+
+  /deep/.upload-demo {
+    .el-upload {
+      display: flex;
+      align-items: center;
+    }
+  }
+</style>
